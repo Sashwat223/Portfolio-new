@@ -27,73 +27,82 @@ export default async function handler(req: Req, res: Res) {
     return;
   }
 
-  const parsed = contactSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid form submission.' });
-    return;
-  }
-
-  const { name, email, subject, message, website } = parsed.data;
-  if (website && website.trim().length > 0) {
-    res.status(400).json({ error: 'Spam check failed.' });
-    return;
-  }
-
-  const entry: StoredMessage = {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    subject,
-    message,
-    createdAt: new Date().toISOString(),
-    emailDelivered: false,
-  };
-
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const toEmail = process.env.CONTACT_TO_EMAIL || 'sashwatdhakal224@gmail.com';
-  const fromEmail = process.env.CONTACT_FROM_EMAIL || user;
-
-  if (host && user && pass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host,
-        port: Number(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_SECURE !== 'false',
-        auth: { user, pass },
-      });
-
-      await transporter.sendMail({
-        from: `"Portfolio Contact" <${fromEmail}>`,
-        to: toEmail,
-        replyTo: `"${name}" <${email}>`,
-        subject: `[Portfolio] ${subject}`,
-        text: `Name: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`,
-      });
-      entry.emailDelivered = true;
-    } catch (err) {
-      console.error('SMTP delivery failed:', err);
+  try {
+    const rawBody = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const parsed = contactSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid form submission.' });
+      return;
     }
-  }
 
-  const all = await readMessages();
-  all.unshift(entry);
-  await writeMessages(all);
+    const { name, email, subject, message, website } = parsed.data;
+    if (website && website.trim().length > 0) {
+      res.status(400).json({ error: 'Spam check failed.' });
+      return;
+    }
 
-  if (entry.emailDelivered) {
+    const entry: StoredMessage = {
+      id: crypto.randomUUID(),
+      name,
+      email,
+      subject,
+      message,
+      createdAt: new Date().toISOString(),
+      emailDelivered: false,
+    };
+
+    const host = process.env.SMTP_HOST;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const toEmail = process.env.CONTACT_TO_EMAIL || 'sashwatdhakal224@gmail.com';
+    const fromEmail = process.env.CONTACT_FROM_EMAIL || user;
+
+    if (host && user && pass) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host,
+          port: Number(process.env.SMTP_PORT) || 465,
+          secure: process.env.SMTP_SECURE !== 'false',
+          auth: { user, pass },
+          connectionTimeout: 5000,
+          greetingTimeout: 5000,
+          socketTimeout: 6000,
+        });
+
+        await transporter.sendMail({
+          from: `"Portfolio Contact" <${fromEmail}>`,
+          to: toEmail,
+          replyTo: `"${name}" <${email}>`,
+          subject: `[Portfolio] ${subject}`,
+          text: `Name: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`,
+        });
+        entry.emailDelivered = true;
+      } catch (err) {
+        console.error('SMTP delivery failed:', err);
+      }
+    }
+
+    const all = await readMessages();
+    all.unshift(entry);
+    await writeMessages(all);
+
+    if (entry.emailDelivered) {
+      res.status(200).json({
+        ok: true,
+        emailDelivered: true,
+        message: 'Your message has been delivered to Sashwat Dhakal.',
+      });
+      return;
+    }
+
     res.status(200).json({
       ok: true,
-      emailDelivered: true,
-      message: 'Your message has been delivered to Sashwat Dhakal.',
+      emailDelivered: false,
+      message:
+        'Your message has been saved to Sashwat’s inbox (direct SMTP email relay is not configured on this server).',
     });
-    return;
+  } catch (err) {
+    console.error('Contact API error:', err);
+    res.status(500).json({ error: 'Server error while saving message.' });
   }
-
-  res.status(200).json({
-    ok: true,
-    emailDelivered: false,
-    message:
-      'Your message has been saved to Sashwat’s inbox (direct SMTP email relay is not configured on this server).',
-  });
 }

@@ -27,11 +27,15 @@ export const ContactSection: React.FC = () => {
     setStatus('submitting');
     setFeedback('');
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
+        signal: controller.signal,
       });
 
       const data = await res.json().catch(() => ({}));
@@ -46,9 +50,15 @@ export const ContactSection: React.FC = () => {
       setStatus('success');
       setFeedback(data.message || 'Your message has been delivered successfully.');
       setForm({ name: '', email: '', subject: '', message: '', website: '' });
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setFeedback('Network error while contacting the mail server. Please try again later.');
+      setFeedback(
+        err instanceof DOMException && err.name === 'AbortError'
+          ? 'Request timed out. Please try again or email sashwatdhakal224@gmail.com directly.'
+          : 'Network error while contacting the mail server. Please try again later.'
+      );
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   };
 
