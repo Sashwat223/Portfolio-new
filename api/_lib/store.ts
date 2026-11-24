@@ -17,7 +17,7 @@ export function getAdminPassword(): string {
 }
 
 export function signAdminToken(): string {
-  const exp = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
+  const exp = Date.now() + 2 * 60 * 60 * 1000;
   const payload = String(exp);
   const sig = crypto
     .createHmac('sha256', getAdminPassword())
@@ -45,21 +45,30 @@ export function verifyAdminToken(token: string): boolean {
 
 const TMP_FILE = path.join('/tmp', 'sashwat_portfolio_messages.json');
 
-export async function readMessages(): Promise<StoredMessage[]> {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+function getKvConfig() {
+  const kvUrl = (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || '').replace(/\/+$/, '');
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '';
+  return kvUrl && kvToken ? { kvUrl, kvToken } : null;
+}
 
-  if (kvUrl && kvToken) {
+export async function readMessages(): Promise<StoredMessage[]> {
+  const kv = getKvConfig();
+
+  if (kv) {
     try {
-      const r = await fetch(`${kvUrl}/get/portfolio_messages`, {
-        headers: { Authorization: `Bearer ${kvToken}` },
+      const r = await fetch(kv.kvUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kv.kvToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(['GET', 'portfolio_messages']),
       });
-      const data = (await r.json()) as { result?: string };
-      if (data.result) {
-        const parsed = JSON.parse(data.result);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-      return [];
+      if (!r.ok) return [];
+      const data = (await r.json()) as { result?: string | null };
+      if (!data.result) return [];
+      const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -75,18 +84,20 @@ export async function readMessages(): Promise<StoredMessage[]> {
 }
 
 export async function writeMessages(messages: StoredMessage[]): Promise<void> {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const kv = getKvConfig();
 
-  if (kvUrl && kvToken) {
-    await fetch(`${kvUrl}/set/portfolio_messages`, {
+  if (kv) {
+    const r = await fetch(kv.kvUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${kvToken}`,
+        Authorization: `Bearer ${kv.kvToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(JSON.stringify(messages)),
+      body: JSON.stringify(['SET', 'portfolio_messages', JSON.stringify(messages)]),
     });
+    if (!r.ok) {
+      throw new Error(`Upstash KV write failed with status ${r.status}`);
+    }
     return;
   }
 
