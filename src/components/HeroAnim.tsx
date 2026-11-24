@@ -29,7 +29,12 @@ function mapCoordinatesToGaze360(sx: number, sy: number) {
   return { centerBlend, ringA, ringB, ringFrac: clamped - ringA };
 }
 
-export const HeroAnim: React.FC = () => {
+interface HeroAnimProps {
+  onEnterJourney: () => void;
+  journeyUnlocked: boolean;
+}
+
+export const HeroAnim: React.FC<HeroAnimProps> = ({ onEnterJourney, journeyUnlocked }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -274,16 +279,19 @@ export const HeroAnim: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Minimal Scroll Cue */}
+      {/* "My Journey" Gradient Gate Button */}
       <div className="relative z-20 flex items-center justify-center pt-4">
-        <a
-          href="#journey"
-          className="group inline-flex items-center gap-3 font-mono-tech text-[11px] tracking-[0.22em] uppercase text-[#EFECE3]/80 hover:text-[#7EC4D8] transition-colors"
+        <button
+          type="button"
+          onClick={onEnterJourney}
+          className="group relative inline-flex items-center gap-3 rounded-full px-8 py-3.5 font-mono-tech text-xs font-semibold tracking-[0.22em] uppercase text-[#071922] shadow-[0_12px_35px_rgba(46,149,186,0.35)] hover:shadow-[0_16px_45px_rgba(142,224,247,0.55)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 cursor-pointer"
+          style={{
+            background: 'linear-gradient(125deg, #EFECE3 0%, #8EE0F7 48%, #2E95BA 100%)',
+          }}
         >
-          <span className="inline-block w-6 h-[1px] bg-current group-hover:w-10 transition-all duration-300" />
-          <span>SCROLL TO EXPLORE</span>
-          <span className="inline-block w-6 h-[1px] bg-current group-hover:w-10 transition-all duration-300" />
-        </a>
+          <span>{journeyUnlocked ? 'Explore Journey' : 'My Journey'}</span>
+          <span className="inline-block w-5 h-[1.5px] bg-[#071922] group-hover:w-8 transition-all duration-300" />
+        </button>
       </div>
     </section>
   );

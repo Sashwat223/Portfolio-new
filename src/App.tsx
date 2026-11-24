@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { HeroAnim } from './components/HeroAnim';
 import { ChapterNav } from './components/ChapterNav';
 import { JourneyAndEducation } from './components/JourneyAndEducation';
@@ -10,6 +10,34 @@ import { ContactSection } from './components/ContactSection';
 import { PROFILE } from './data/portfolioData';
 
 export const App: React.FC = () => {
+  const [journeyUnlocked, setJourneyUnlocked] = useState(false);
+
+  // Lock page scrolling until the visitor clicks "My Journey"
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    if (!journeyUnlocked) {
+      html.style.overflow = 'hidden';
+      body.style.overflow = 'hidden';
+    } else {
+      html.style.overflow = '';
+      body.style.overflow = '';
+    }
+    return () => {
+      html.style.overflow = '';
+      body.style.overflow = '';
+    };
+  }, [journeyUnlocked]);
+
+  const handleEnterJourney = () => {
+    // Trigger audio playback synchronously within the user's click gesture
+    window.dispatchEvent(new CustomEvent('start-journey-audio'));
+    setJourneyUnlocked(true);
+    requestAnimationFrame(() => {
+      document.getElementById('journey')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  };
+
   return (
     <div className="relative min-h-screen text-[#EFECE3]">
       {/* Subtle cinematic film grain */}
@@ -18,26 +46,26 @@ export const App: React.FC = () => {
       {/* Background music & live beat visualizer */}
       <BackgroundBeatAudio />
 
-      {/* Chapter navigation rail */}
-      <ChapterNav />
+      {/* Chapter navigation rail (visible once journey is unlocked) */}
+      {journeyUnlocked && <ChapterNav />}
 
       <main className="relative z-10">
-        {/* 01 — Introduction (Signature Transparent Cursor-Controlled Character Hero) */}
-        <HeroAnim />
+        {/* Hero with "My Journey" entry button */}
+        <HeroAnim onEnterJourney={handleEnterJourney} journeyUnlocked={journeyUnlocked} />
 
-        {/* 02 — My Journey, 03 — Education, 04 — Experience */}
+        {/* My Journey, Education, Experience */}
         <JourneyAndEducation />
 
-        {/* 05 — Qualifications & Skills */}
+        {/* Qualifications & Skills */}
         <QualificationsAndSkills />
 
-        {/* 06 — Project Universe & 3D Animated Books */}
+        {/* Project Universe & 3D Animated Books */}
         <ProjectUniverse />
 
-        {/* 07 — Creative Personality */}
+        {/* Creative Personality */}
         <CreativeSide />
 
-        {/* 08 — Contact & Real Email Delivery */}
+        {/* Contact & Real Email Delivery */}
         <ContactSection />
       </main>
 

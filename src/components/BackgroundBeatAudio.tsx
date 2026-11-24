@@ -114,6 +114,7 @@ export const BackgroundBeatAudio: React.FC = () => {
         .catch(() => {});
     };
 
+    window.addEventListener('start-journey-audio', unlockOnGesture);
     window.addEventListener('pointerdown', unlockOnGesture, { once: true, passive: true });
     window.addEventListener('mousedown', unlockOnGesture, { once: true, passive: true });
     window.addEventListener('touchstart', unlockOnGesture, { once: true, passive: true });
@@ -123,6 +124,7 @@ export const BackgroundBeatAudio: React.FC = () => {
       audio.removeEventListener('play', syncState);
       audio.removeEventListener('pause', syncState);
       audio.removeEventListener('canplay', tryAutoplay);
+      window.removeEventListener('start-journey-audio', unlockOnGesture);
       window.removeEventListener('pointerdown', unlockOnGesture);
       window.removeEventListener('mousedown', unlockOnGesture);
       window.removeEventListener('touchstart', unlockOnGesture);
