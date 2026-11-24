@@ -20,5 +20,9 @@ export default async function handler(req: IncomingMessage, res: Res) {
   }
 
   const messages = await readMessages();
-  res.status(200).json({ messages });
+  const hasKv = Boolean(
+    (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL) &&
+      (process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN)
+  );
+  res.status(200).json({ messages, storage: hasKv ? 'kv' : 'ephemeral-tmp' });
 }

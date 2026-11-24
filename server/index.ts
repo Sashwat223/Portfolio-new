@@ -205,7 +205,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 app.get('/api/admin/messages', requireAdmin, (_req, res) => {
-  res.json({ messages: readMessages() });
+  res.json({ messages: readMessages(), storage: 'local-file' });
 });
 
 app.delete('/api/admin/messages/:id', requireAdmin, (req, res) => {

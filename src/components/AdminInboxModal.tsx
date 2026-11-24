@@ -20,6 +20,7 @@ export const AdminInboxModal: React.FC<AdminInboxModalProps> = ({ open, onClose 
   const [password, setPassword] = useState('');
   const [token, setToken] = useState<string | null>(null);
   const [messages, setMessages] = useState<StoredMessage[]>([]);
+  const [storageMode, setStorageMode] = useState<string>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -38,6 +39,7 @@ export const AdminInboxModal: React.FC<AdminInboxModalProps> = ({ open, onClose 
       }
       const data = await res.json();
       setMessages(Array.isArray(data.messages) ? data.messages : []);
+      if (typeof data.storage === 'string') setStorageMode(data.storage);
     } catch {
       setError('Failed to load messages.');
     } finally {
@@ -155,8 +157,15 @@ export const AdminInboxModal: React.FC<AdminInboxModalProps> = ({ open, onClose 
               </button>
             </form>
           ) : messages.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[#98B2BD]">
-              No messages in repository yet.
+            <div className="py-12 text-center space-y-3">
+              <div className="text-sm text-[#98B2BD]">No messages in repository yet.</div>
+              {storageMode === 'ephemeral-tmp' && (
+                <p className="text-xs text-amber-300/90 max-w-md mx-auto leading-relaxed">
+                  Running on ephemeral serverless <code>/tmp</code> storage. Connect Upstash Redis / Vercel KV (
+                  <code>KV_REST_API_URL</code> &amp; <code>KV_REST_API_TOKEN</code>) in Vercel Environment Variables
+                  for persistent storage across requests.
+                </p>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
