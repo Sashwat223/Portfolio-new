@@ -56,6 +56,11 @@ export const AdminInboxModal: React.FC<AdminInboxModalProps> = ({ open, onClose 
         body: JSON.stringify({ password }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 404 || res.status === 405) {
+        setError('Admin API not available on this host (requires Node server or Vercel Functions).');
+        setLoading(false);
+        return;
+      }
       if (!res.ok || !data.token) {
         setError(data.error || 'Access denied.');
         setLoading(false);
